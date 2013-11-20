@@ -1,70 +1,85 @@
 #/bin/bash
 
+# Variables
+glance_config="./glanceBackup.config"
+admin_user=$(cat $glance_config | grep "^admin_username" | grep -E -o "[^=]*$" | head -1)
+admin_pass=$(cat $glance_config | grep "^admin_password" | grep -E -o "[^=]*$" | head -1)
+admin_tenant_ID=$(cat $glance_config | grep "^admin_tenantId" | grep -E -o "[^=]*$" | head -1)
+API_endpoint_keystone=$(cat $glance_config | grep "^api_endpoint_identity_service" | grep -E -o "[^=]*$" | head -1)
+API_endpoint_compute=$(cat $glance_config | grep "^api_endpoint_compute_service" | grep -E -o "[^=]*$" | head -1)
+backup_list=$(cat $glance_config | grep -E "[a-z0-9]{8}\-[a-z0-9]{4}\-[a-z0-9]{4}\-[a-z0-9]{4}\-[a-z0-9]{12}$")
+glance_images_folder=$(cat $glance_config | grep "^glance_images_folder" | grep -E -o "[^=]*$" | head -1)
+sources_file=$(cat $glance_config | grep "^sources_file" | grep -E -o "[^=]*$" | head -1)
+
 # Get token (Admin account for all access)
-token=$(curl -k -X 'POST' http://161.3.200.2:5000/v2.0/tokens \
--d '{"auth":{"passwordCredentials":{"username": "admin", "password":"admin_pass"}, "tenantId":"ac331507c10142f0a1a8cd881ccae3d1"}}' \
+token=$(curl -k -X 'POST' $API_endpoint_keystone/tokens \
+-d '{"auth":{"passwordCredentials":{"username": "'$admin_user'", "password": "'$admin_pass'"}, "tenantId": "'$admin_tenant_ID'"}}' \
 -H 'Content-type: application/json'|grep -E -o '[A-Za-z0-9\+\-]{100,}')
 
-# Number of Backup
-
 # Launch Backup for each VM
-curl -d '{"createBackup": {"name": "DockerBackupAutoScript","backup_type": "daily","rotation": 2}}' \
--H "X-Auth-Token: $token " \
--H "Content-type: application/json" http://161.3.200.2:8774/v2/ac331507c10142f0a1a8cd881ccae3d1/servers/7364d36d-6f12-4e9d-8533-a0f43b64ba06/action
-
-curl -d '{"createBackup": {"name": "LDAPBackupAutoScript","backup_type": "daily","rotation": 2}}' \
--H "X-Auth-Token: $token " \
--H "Content-type: application/json" http://161.3.200.2:8774/v2/ac331507c10142f0a1a8cd881ccae3d1/servers/6d50e386-4148-4048-aa07-c799f767c341/action
-
-curl -d '{"createBackup": {"name": "DNSBackupAutoScript","backup_type": "daily","rotation": 2}}' \
--H "X-Auth-Token: $token " \
--H "Content-type: application/json" http://161.3.200.2:8774/v2/ac331507c10142f0a1a8cd881ccae3d1/servers/7af130a4-43c7-4ed5-be3b-0760f99472d7/action
+for line in $(echo $backup_list)
+do
+  backup_name=$(echo $line | cut -f1 -d ";" | grep -E -o "[A-Za-z0-9]*")
+  backup_type=$(echo $line | cut -f2 -d ";" | grep -E -o "[A-Za-z0-9]*")
+  backup_rotation=$(echo $line | cut -f3 -d ";" | grep -E -o "[0-9]*")
+  backup_id=$(echo $line | cut -f4 -d ";" | grep -E -o "[a-z0-9]{8}\-[a-z0-9]{4}\-[a-z0-9]{4}\-[a-z0-9]{4}\-[a-z0-9]{12}")
+  curl -d '{"createBackup": {"name": "'$backup_name'","backup_type": "'$backup_type'","rotation": '$backup_rotation'}}' \
+  -H "X-Auth-Token: $token " \
+  -H "Content-type: application/json" $API_endpoint_compute/servers/$backup_id/action
+done
 
 echo "API Requested"
 
 # Sources for Glance commands
-source /home/satin/sources
+source $sources_file 
 echo "Sources Imported" 
 
 # New Backup ID
-NewBackupID=$(glance image-list|grep -E -o ".*BackupAutoScript.*queued"|grep -E -o "[a-z0-9]{8}\-[a-z0-9]{4}\-[a-z0-9]{4}\-[a-z0-9]{4}\-[a-z0-9]{12}")
-echo "New Backup : "$NewBackupID
+new_backup_ID=$(glance image-list|grep -E -o ".*BackupAutoScript.*queued"|grep -E -o "[a-z0-9]{8}\-[a-z0-9]{4}\-[a-z0-9]{4}\-[a-z0-9]{4}\-[a-z0-9]{12}")
+echo "New Backup : "$new_backup_ID
 
 # Sleep when Create Backup Process
-VMQueued=$(glance image-list|grep -E -o ".*BackupAutoScript.*queued" | wc -c)
-while [ $VMQueued -gt 0 ]
+VM_queued=$(glance image-list|grep -E -o ".*BackupAutoScript.*queued" | wc -c)
+while [ $VM_queued -gt 0 ]
 do
   sleep 5
-  VMQueued=$(glance image-list|grep -E -o ".*BackupAutoScript.*queued" | wc -c)
+  VM_queued=$(glance image-list|grep -E -o ".*BackupAutoScript.*queued" | wc -c)
 done
 echo "Backup Queued"
 
 # Sleep when Saving Backup Process
-VMSaving=$(glance image-list|grep -E -o ".*BackupAutoScript.*saving" | wc -c)
-while [ $VMSaving -gt 0 ]
+VM_saving=$(glance image-list|grep -E -o ".*BackupAutoScript.*saving" | wc -c)
+while [ $VM_saving -gt 0 ]
 do
   sleep 5
-  VMSaving=$(glance image-list|grep -E -o ".*BackupAutoScript.*saving" | wc -c)
+  VM_saving=$(glance image-list|grep -E -o ".*BackupAutoScript.*saving" | wc -c)
 done
 echo "Backup Saved"
 
-# Copie VM
-for VMID in $NewBackupID
+# Copy VM
+for VM_ID in $new_backup_ID
 do
-  cp /glance/images/$VMID $HOME/VMBackup/
-  echo "VM : "$VMID" Copied"
-done
-
-# Delete Old VM in CopieFolder
-for VMID in $(ls $HOME/VMBackup/|grep -E -o "[a-z0-9]{8}\-[a-z0-9]{4}\-[a-z0-9]{4}\-[a-z0-9]{4}\-[a-z0-9]{12}")
-do
-  ls /glance/images/$VMID $1>/dev/null
+  cp $glance_images_folder$VM_ID $HOME/VMBackup/
   if [[ $(echo $?) -gt 0 ]]
   then
-    rm -f $HOME/VMBackup/$VMID
-    echo "VM : "$VMID" Removed"
+    echo "VM : "$VM_ID" check in /glance/images/ ERROR"
+  else
+    rm -f $HOME/VMBackup/$VM_ID
+    echo "VM : "$VM_ID" Copied"
+  fi
+done
+
+# Delete Old VM in CopyFolder
+for VM_ID in $(ls $HOME/VMBackup/|grep -E -o "[a-z0-9]{8}\-[a-z0-9]{4}\-[a-z0-9]{4}\-[a-z0-9]{4}\-[a-z0-9]{12}")
+do
+  ls $glance_images_folder$VM_ID $1>/dev/null
+  if [[ $(echo $?) -gt 0 ]]
+  then
+    echo "VM : "$VM_ID" aren't in Glance images folder"
+    rm -f $HOME/VMBackup/$VM_ID
+    echo "VM : "$VM_ID" Removed"
   fi
 done
 
 # Log in Syslog File
-echo "$(date +"%h %d %H:%M:%S") $HOSTNAME Backup_Openstack: Backup Finished" >> /var/log/syslog
+echo "$(date +"%h %d %H:%M:%S") $HOSTNAME Openstack_Backup: Backup Finished" >> /var/log/syslog
