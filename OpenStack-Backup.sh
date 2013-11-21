@@ -1,5 +1,8 @@
 #/bin/bash
 
+# Display Date with syslog format
+date +"%h %d %H:%M:%S"
+
 # Variables
 glance_config="./glanceBackup.config"
 admin_user=$(cat $glance_config | grep "^admin_username" | grep -E -o "[^=]*$" | head -1)
@@ -12,7 +15,7 @@ glance_images_folder=$(cat $glance_config | grep "^glance_images_folder" | grep 
 sources_file=$(cat $glance_config | grep "^sources_file" | grep -E -o "[^=]*$" | head -1)
 
 # Get token (Admin account for all access)
-token=$(curl -k -X 'POST' $API_endpoint_keystone/tokens \
+token=$(curl -s -k -X 'POST' $API_endpoint_keystone/tokens \
 -d '{"auth":{"passwordCredentials":{"username": "'$admin_user'", "password": "'$admin_pass'"}, "tenantId": "'$admin_tenant_ID'"}}' \
 -H 'Content-type: application/json'|grep -E -o '[A-Za-z0-9\+\-]{100,}')
 
@@ -23,7 +26,7 @@ do
   backup_type=$(echo $line | cut -f2 -d ";" | grep -E -o "[A-Za-z0-9]*")
   backup_rotation=$(echo $line | cut -f3 -d ";" | grep -E -o "[0-9]*")
   backup_id=$(echo $line | cut -f4 -d ";" | grep -E -o "[a-z0-9]{8}\-[a-z0-9]{4}\-[a-z0-9]{4}\-[a-z0-9]{4}\-[a-z0-9]{12}")
-  curl -d '{"createBackup": {"name": "'$backup_name'","backup_type": "'$backup_type'","rotation": '$backup_rotation'}}' \
+  curl -s -d '{"createBackup": {"name": "'$backup_name'","backup_type": "'$backup_type'","rotation": '$backup_rotation'}}' \
   -H "X-Auth-Token: $token " \
   -H "Content-type: application/json" $API_endpoint_compute/servers/$backup_id/action
 done
