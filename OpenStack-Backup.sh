@@ -1,13 +1,17 @@
 #/bin/bash
 
+# Configure Config File
+glance_config="./glanceBackup.config"
+
 # Display Date with syslog format
 date +"%h %d %H:%M:%S"
 
 # Get Latest Version
-pwd
+script_dir=$(cat $glance_config | grep "^script_dir" | grep -E -o "[^=]*$" | head -1)
+cd $script_dir
+git pull
 
 # Variables
-glance_config="./glanceBackup.config"
 admin_user=$(cat $glance_config | grep "^admin_username" | grep -E -o "[^=]*$" | head -1)
 admin_pass=$(cat $glance_config | grep "^admin_password" | grep -E -o "[^=]*$" | head -1)
 admin_tenant_ID=$(cat $glance_config | grep "^admin_tenantId" | grep -E -o "[^=]*$" | head -1)
