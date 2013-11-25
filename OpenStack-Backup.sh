@@ -9,7 +9,8 @@ date +"%h %d %H:%M:%S"
 # Get Latest Version
 script_dir=$(cat $glance_config | grep "^script_dir" | grep -E -o "[^=]*$" | head -1)
 cd $script_dir
-git pull
+git_pull=$(git pull)
+echo "$(date +"%h %d %H:%M:%S") $HOSTNAME Openstack_Backup: $git_pull" >> /var/log/syslog
 
 # Variables
 admin_user=$(cat $glance_config | grep "^admin_username" | grep -E -o "[^=]*$" | head -1)
