@@ -1,7 +1,7 @@
 #/bin/bash
 
 # Configure Config File
-glance_config="./glanceBackup.config"
+glance_config="/home/satin/openstack-backup/glanceBackup.config"
 
 # Display Date with syslog format
 date +"%h %d %H:%M:%S"
