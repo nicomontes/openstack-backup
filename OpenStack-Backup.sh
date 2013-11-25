@@ -3,6 +3,9 @@
 # Display Date with syslog format
 date +"%h %d %H:%M:%S"
 
+# Get Latest Version
+pwd
+
 # Variables
 glance_config="./glanceBackup.config"
 admin_user=$(cat $glance_config | grep "^admin_username" | grep -E -o "[^=]*$" | head -1)
