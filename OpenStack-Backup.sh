@@ -38,15 +38,12 @@ do
   -H "Content-type: application/json" $API_endpoint_compute/servers/$backup_id/action
 done
 
-echo "API Requested"
-
 # Sources for Glance commands
 source $sources_file 
-echo "Sources Imported" 
 
 # New Backup ID
 new_backup_ID=$(glance image-list|grep -E -o ".*BackupAutoScript.*queued"|grep -E -o "[a-z0-9]{8}\-[a-z0-9]{4}\-[a-z0-9]{4}\-[a-z0-9]{4}\-[a-z0-9]{12}")
-echo "New Backup : "$new_backup_ID
+echo "$(date +"%h %d %H:%M:%S") $HOSTNAME Openstack_Backup: New Backup : $new_backup_ID">> /var/log/syslog
 
 # Sleep when Create Backup Process
 VM_queued=$(glance image-list|grep -E -o ".*BackupAutoScript.*queued" | wc -c)
@@ -55,7 +52,6 @@ do
   sleep 5
   VM_queued=$(glance image-list|grep -E -o ".*BackupAutoScript.*queued" | wc -c)
 done
-echo "Backup Queued"
 
 # Sleep when Saving Backup Process
 VM_saving=$(glance image-list|grep -E -o ".*BackupAutoScript.*saving" | wc -c)
@@ -72,10 +68,11 @@ do
   cp $glance_images_folder$VM_ID $HOME/VMBackup/
   if [[ $(echo $?) -gt 0 ]]
   then
-    echo "VM : "$VM_ID" check in /glance/images/ ERROR"
+    echo "$(date +"%h %d %H:%M:%S") $HOSTNAME Openstack_Backup: VM : $VM_ID check in /glance/images/ ERROR">> /var/log/syslog
+
   else
     rm -f $HOME/VMBackup/$VM_ID
-    echo "VM : "$VM_ID" Copied"
+    echo "$(date +"%h %d %H:%M:%S") $HOSTNAME Openstack_Backup: VM : $VM_ID Copied">> /var/log/syslog 
   fi
 done
 
@@ -85,9 +82,9 @@ do
   ls $glance_images_folder$VM_ID $1>/dev/null
   if [[ $(echo $?) -gt 0 ]]
   then
-    echo "VM : "$VM_ID" aren't in Glance images folder"
+    echo "$(date +"%h %d %H:%M:%S") $HOSTNAME Openstack_Backup: VM : $VM_ID aren't in Glance images folder">> /var/log/syslog
     rm -f $HOME/VMBackup/$VM_ID
-    echo "VM : "$VM_ID" Removed"
+    echo "$(date +"%h %d %H:%M:%S") $HOSTNAME Openstack_Backup: $VM_ID Removed" >> /var/log/syslog
   fi
 done
 
