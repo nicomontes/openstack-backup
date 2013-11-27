@@ -10,7 +10,7 @@ date +"%h %d %H:%M:%S"
 script_dir=$(cat $glance_config | grep "^script_dir" | grep -E -o "[^=]*$" | head -1)
 cd $script_dir
 git_pull=$(git pull)
-echo "$(date +"%h %d %H:%M:%S") $HOSTNAME Openstack_Backup: $git_pull" >> /var/log/syslog
+echo "$(date +"%h %d %H:%M:%S") $HOSTNAME Openstack_Backup: $git_pull" >> $HOME/VMBackup/log
 
 # Variables
 admin_user=$(cat $glance_config | grep "^admin_username" | grep -E -o "[^=]*$" | head -1)
@@ -45,7 +45,7 @@ source $sources_file
 
 # New Backup ID
 new_backup_ID=$(glance image-list|grep -E -o ".*BackupAutoScript.*queued"|grep -E -o "[a-z0-9]{8}\-[a-z0-9]{4}\-[a-z0-9]{4}\-[a-z0-9]{4}\-[a-z0-9]{12}")
-echo "$(date +"%h %d %H:%M:%S") $HOSTNAME Openstack_Backup: New Backup : $new_backup_ID">> /var/log/syslog
+echo "$(date +"%h %d %H:%M:%S") $HOSTNAME Openstack_Backup: New Backup : $new_backup_ID">> $HOME/VMBackup/log
 
 # Sleep when Create Backup Process
 VM_queued=$(glance image-list|grep -E -o ".*BackupAutoScript.*queued" | wc -c)
@@ -70,11 +70,11 @@ do
   cp $glance_images_folder$VM_ID $HOME/VMBackup/
   if [[ $(echo $?) -gt 0 ]]
   then
-    echo "$(date +"%h %d %H:%M:%S") $HOSTNAME Openstack_Backup: VM : $VM_ID check in /glance/images/ ERROR">> /var/log/syslog
+    echo "$(date +"%h %d %H:%M:%S") $HOSTNAME Openstack_Backup: VM : $VM_ID check in /glance/images/ ERROR">> $HOME/VMBackup/log
 
   else
     rm -f $HOME/VMBackup/$VM_ID
-    echo "$(date +"%h %d %H:%M:%S") $HOSTNAME Openstack_Backup: VM : $VM_ID Copied">> /var/log/syslog 
+    echo "$(date +"%h %d %H:%M:%S") $HOSTNAME Openstack_Backup: VM : $VM_ID Copied">> $HOME/VMBackup/log 
   fi
 done
 
@@ -84,11 +84,11 @@ do
   ls $glance_images_folder$VM_ID $1>/dev/null
   if [[ $(echo $?) -gt 0 ]]
   then
-    echo "$(date +"%h %d %H:%M:%S") $HOSTNAME Openstack_Backup: VM : $VM_ID aren't in Glance images folder">> /var/log/syslog
+    echo "$(date +"%h %d %H:%M:%S") $HOSTNAME Openstack_Backup: VM : $VM_ID aren't in Glance images folder">> $HOME/VMBackup/log
     rm -f $HOME/VMBackup/$VM_ID
-    echo "$(date +"%h %d %H:%M:%S") $HOSTNAME Openstack_Backup: $VM_ID Removed" >> /var/log/syslog
+    echo "$(date +"%h %d %H:%M:%S") $HOSTNAME Openstack_Backup: $VM_ID Removed" >> $HOME/VMBackup/log
   fi
 done
 
 # Log in Syslog File
-echo "$(date +"%h %d %H:%M:%S") $HOSTNAME Openstack_Backup: Backup Finished" >> /var/log/syslog
+echo "$(date +"%h %d %H:%M:%S") $HOSTNAME Openstack_Backup: Backup Finished" >> $HOME/VMBackup/log
