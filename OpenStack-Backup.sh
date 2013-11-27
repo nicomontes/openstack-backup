@@ -37,7 +37,7 @@ do
   curl -s -d '{"createBackup": {"name": "'$backup_name'","backup_type": "'$backup_type'","rotation": '$backup_rotation'}}' \
   -H "X-Auth-Token: $token " \
   -H "Content-type: application/json" $API_endpoint_compute/servers/$backup_id/action
-  sleep 1
+  sleep 5
 done
 
 # Sources for Glance commands
