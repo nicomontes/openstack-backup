@@ -84,8 +84,7 @@ sleep 10
 # New Backup ID
 # Exec regex for match all NEW backup ID
 new_backup_list=$(nova image-list | grep -E "$regex_list" | cut -f2 -d "|" | grep -o "[^\ ]*")
-echo "New Backup :" $new_backup_list >> $log
-# Read Arry
+# Read Array
 i_max=$(echo $new_backup_list | wc -w)
 for ((i = 0; i < $i_max; i += 1))
 do
