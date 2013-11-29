@@ -97,23 +97,18 @@ do
     # IF new Backup is in last backup list THEN add in regex
     if [ "$line" = "${last_backup[$i]}" ]
     then
-      regex_match_new_backup=$(echo "$regex_match_new_backup $line |")
+      regex_match_new_backup=$(echo "$regex_match_new_backup$line|")
     fi
   done
 done
 regex_match_new_backup=$(echo $regex_match_new_backup | sed "s/.$//")
-echo $new_backup_list
-echo "---"
-echo $regex_match_new_backup
 # Match Regex (Same Backup ID) and we invert with -v
-echo "+++"
-echo $new_backup_list | grep -E -v $regex_match_new_backup
+last_backup=$(echo "$new_backup_list" | grep -E -v $regex_match_new_backup)
 
 # Copy VM
-for VM_ID in $new_backup_list
+for VM_ID in $last_backup
 do
-  echo "$glance_images_folder$VM_ID"
-  cp $glance_images_folder$VM_ID
+  cp $glance_images_folder$VM_ID /glance/VMBackup/$VM_ID 
   if [[ $(echo $?) -gt 0 ]]
   then
     echo "$(date +"%h %d %H:%M:%S") $HOSTNAME Openstack_Backup: VM : $VM_ID check in /glance/images/ ERROR">> $log
@@ -125,13 +120,13 @@ do
 done
 
 # Delete Old VM in CopyFolder
-for VM_ID in $(ls $HOME/VMBackup/|grep -E -o "[a-z0-9]{8}\-[a-z0-9]{4}\-[a-z0-9]{4}\-[a-z0-9]{4}\-[a-z0-9]{12}")
+for VM_ID in $(ls /glance/VMBackup/|grep -E -o "[a-z0-9]{8}\-[a-z0-9]{4}\-[a-z0-9]{4}\-[a-z0-9]{4}\-[a-z0-9]{12}")
 do
-  ls $glance_images_folder$VM_ID $1>/dev/null
+  ls $glance_images_folder$VM_ID 2>/dev/null
   if [[ $(echo $?) -gt 0 ]]
   then
     echo "$(date +"%h %d %H:%M:%S") $HOSTNAME Openstack_Backup: VM : $VM_ID aren't in Glance images folder">> $log
-    rm -f $$VM_ID
+    rm -f /glance/VMBackup/$VM_ID
     echo "$(date +"%h %d %H:%M:%S") $HOSTNAME Openstack_Backup: $VM_ID Removed" >> $log
   fi
 done
