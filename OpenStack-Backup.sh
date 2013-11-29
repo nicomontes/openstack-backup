@@ -48,7 +48,6 @@ do
 done
 
 # Launch Backup for each VM
-echo "backup list : $backup_list" >> $log
 for line in $backup_list
 do
   backup_name=$(echo $line | cut -f1 -d ";" | grep -E -o "[A-Za-z0-9]*")
@@ -120,7 +119,7 @@ done
 # Delete Old VM in CopyFolder
 for VM_ID in $(ls $glance_images_backup|grep -E -o "[a-z0-9]{8}\-[a-z0-9]{4}\-[a-z0-9]{4}\-[a-z0-9]{4}\-[a-z0-9]{12}")
 do
-  ls $glance_images_folder$VM_ID 2>/dev/null
+  ls $glance_images_folder$VM_ID 2>/dev/null 1>/dev/null
   if [[ $(echo $?) -gt 0 ]]
   then
     echo "$(date +"%h %d %H:%M:%S") $HOSTNAME Openstack_Backup: VM : $VM_ID aren't in Glance images folder">> $log
