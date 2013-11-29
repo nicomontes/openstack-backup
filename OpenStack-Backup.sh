@@ -19,17 +19,17 @@ API_endpoint_keystone=$(cat $glance_config | grep "^api_endpoint_identity_servic
 API_endpoint_compute=$(cat $glance_config | grep "^api_endpoint_compute_service" | grep -E -o "[^=]*$" | head -1)
 backup_list=$(cat $glance_config | grep -E "^[^\ #].*[a-z0-9]{8}\-[a-z0-9]{4}\-[a-z0-9]{4}\-[a-z0-9]{4}\-[a-z0-9]{12}$")
 glance_images_folder=$(cat $glance_config | grep "^glance_images_folder" | grep -E -o "[^=]*$" | head -1)
+glance_images_backup=$(cat $glance_config | grep "^glance_images_backup" | grep -E -o "[^=]*$" | head -1)
 sources_file=$(cat $glance_config | grep "^sources_file" | grep -E -o "[^=]*$" | head -1)
 
 # Sources for Glance commands
-echo "source file : $sources_file" >> $log
 source $sources_file
 
 # Get token (Admin account for all access)
 token=$(curl -s -k -X 'POST' $API_endpoint_keystone/tokens \
 -d '{"auth":{"passwordCredentials":{"username": "'$admin_user'", "password": "'$admin_pass'"}, "tenantId": "'$admin_tenant_ID'"}}' \
 -H 'Content-type: application/json'|grep -E -o '[A-Za-z0-9\+\-]{100,}')
-echo "token GET" >> $log
+echo "$(date +"%h %d %H:%M:%S") $HOSTNAME Openstack_Backup: token GET" >> $log
 
 # Last Backup ID
 for line in $backup_list
@@ -58,7 +58,7 @@ do
   curl -s -d '{"createBackup": {"name": "'$backup_name'","backup_type": "'$backup_type'","rotation": '$backup_rotation'}}' \
   -H "X-Auth-Token: $token " \
   -H "Content-type: application/json" $API_endpoint_compute/servers/$backup_id/action
-  echo "VM : $backup_name : $backup_id : sendbackup on API" >> $log
+  echo "$(date +"%h %d %H:%M:%S") $HOSTNAME Openstack_Backup: VM : $backup_name : $backup_id : sendbackup on API" >> $log
   sleep 5
 done
 sleep 5
@@ -68,7 +68,6 @@ VM_queued=$(glance image-list|grep -E -o ".*BackupAutoScript.*queued" | wc -c)
 while [ $VM_queued -gt 0 ]
 do
   sleep 5
-  echo "VM Queued : $VM_queued" >> $log
   VM_queued=$(glance image-list|grep -E -o ".*BackupAutoScript.*queued" | wc -c)
 done
 
@@ -77,10 +76,9 @@ VM_saving=$(glance image-list|grep -E -o ".*BackupAutoScript.*saving" | wc -c)
 while [ $VM_saving -gt 0 ]
 do
   sleep 5
-  echo "VM Saving : $VM_saving" >> $log
   VM_saving=$(glance image-list|grep -E -o ".*BackupAutoScript.*saving" | wc -c)
 done
-echo "Backup Saved" >> $log
+echo "$(date +"%h %d %H:%M:%S") $HOSTNAME Openstack_Backup: Backup Saved" >> $log
 
 sleep 10
 
@@ -120,13 +118,13 @@ do
 done
 
 # Delete Old VM in CopyFolder
-for VM_ID in $(ls /glance/VMBackup/|grep -E -o "[a-z0-9]{8}\-[a-z0-9]{4}\-[a-z0-9]{4}\-[a-z0-9]{4}\-[a-z0-9]{12}")
+for VM_ID in $(ls $glance_images_backup|grep -E -o "[a-z0-9]{8}\-[a-z0-9]{4}\-[a-z0-9]{4}\-[a-z0-9]{4}\-[a-z0-9]{12}")
 do
   ls $glance_images_folder$VM_ID 2>/dev/null
   if [[ $(echo $?) -gt 0 ]]
   then
     echo "$(date +"%h %d %H:%M:%S") $HOSTNAME Openstack_Backup: VM : $VM_ID aren't in Glance images folder">> $log
-    rm -f /glance/VMBackup/$VM_ID
+    rm -f $glance_images_backup$VM_ID
     echo "$(date +"%h %d %H:%M:%S") $HOSTNAME Openstack_Backup: $VM_ID Removed" >> $log
   fi
 done
