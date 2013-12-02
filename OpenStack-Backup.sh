@@ -1,4 +1,4 @@
-#/bin/bash
+#!/bin/bash
 
 # Configure Config File
 glance_config="/home/satin/openstack-backup/glanceBackup.config"
