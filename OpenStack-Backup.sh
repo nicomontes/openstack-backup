@@ -6,11 +6,6 @@ glance_config="/home/satin/openstack-backup/glanceBackup.config"
 # Get Log
 log=$(cat $glance_config | grep "^log" | grep -E -o "[^=]*$" | head -1)
 
-# Get Latest Version
-cd /home/satin/openstack-backup/
-git_pull=$(git pull)
-echo "$(date +"%h %d %H:%M:%S") $HOSTNAME Openstack_Backup: Start with Git Pull : $git_pull" >> $log
-
 # Variables
 admin_user=$(cat $glance_config | grep "^admin_username" | grep -E -o "[^=]*$" | head -1)
 admin_pass=$(cat $glance_config | grep "^admin_password" | grep -E -o "[^=]*$" | head -1)
@@ -116,14 +111,14 @@ do
 done
 
 # Delete Old VM in CopyFolder
-for VM_ID in $(ls $glance_images_backup|grep -E -o "[a-z0-9]{8}\-[a-z0-9]{4}\-[a-z0-9]{4}\-[a-z0-9]{4}\-[a-z0-9]{12}")
+for Backup_ID in $(ls $glance_images_backup|grep -E -o "[a-z0-9]{8}\-[a-z0-9]{4}\-[a-z0-9]{4}\-[a-z0-9]{4}\-[a-z0-9]{12}")
 do
-  ls $glance_images_folder$VM_ID 2>/dev/null 1>/dev/null
+  ls $glance_images_folder$Backup_ID 2>/dev/null 1>/dev/null
   if [[ $(echo $?) -gt 0 ]]
   then
-    echo "$(date +"%h %d %H:%M:%S") $HOSTNAME Openstack_Backup: VM : $VM_ID aren't in Glance images folder">> $log
-    rm -f $glance_images_backup$VM_ID
-    echo "$(date +"%h %d %H:%M:%S") $HOSTNAME Openstack_Backup: $VM_ID Removed" >> $log
+    echo "$(date +"%h %d %H:%M:%S") $HOSTNAME Openstack_Backup: Backup : $Backup_ID aren't in Glance images folder">> $log
+    rm -f $glance_images_backup$Backup_ID
+    echo "$(date +"%h %d %H:%M:%S") $HOSTNAME Openstack_Backup: $Backup_ID Removed" >> $log
   fi
 done
 
