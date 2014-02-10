@@ -49,12 +49,6 @@ do
   backup_type=$(echo $line | cut -f2 -d ";" | grep -E -o "[A-Za-z0-9]*")
   backup_rotation=$(echo $line | cut -f3 -d ";" | grep -E -o "[0-9]*")
   server_id=$(echo $line | cut -f4 -d ";" | grep -E -o "[a-z0-9]{8}\-[a-z0-9]{4}\-[a-z0-9]{4}\-[a-z0-9]{4}\-[a-z0-9]{12}")
-  # Send Pause
-  curl -s -d '{"pause": null}' \
-    -H "X-Auth-Token: $token " \
-    -H "Content-type: application/json" $API_endpoint_compute/servers/$server_id/action
-  echo "$(date +"%h %d %H:%M:%S") $HOSTNAME Openstack_Backup: VM : $backup_name : $server_id : sendpause on API" >> $log
-  sleep 1
   # Send Backup
   curl -s -d '{"createBackup": {"name": "'$backup_name'","backup_type": "'$backup_type'","rotation": '$backup_rotation'}}' \
     -H "X-Auth-Token: $token " \
@@ -80,7 +74,6 @@ do
   VM_saving=$(glance image-list|grep -E -o ".*BackupAutoScript.*saving" | wc -c)
 done
 echo "$(date +"%h %d %H:%M:%S") $HOSTNAME Openstack_Backup: Backup Saved" >> $log
-
 sleep 10
 
 # New Backup ID
@@ -127,18 +120,6 @@ do
     rm -f $glance_images_backup$Backup_ID
     echo "$(date +"%h %d %H:%M:%S") $HOSTNAME Openstack_Backup: $Backup_ID Removed" >> $log
   fi
-done
-
-# UnPause VM
-for line in $backup_list
-do
-  backup_name=$(echo $line | cut -f1 -d ";" | grep -E -o "[A-Za-z0-9]*")
-  server_id=$(echo $line | cut -f4 -d ";" | grep -E -o "[a-z0-9]{8}\-[a-z0-9]{4}\-[a-z0-9]{4}\-[a-z0-9]{4}\-[a-z0-9]{12}")
-  # Send UnPause
-  curl -s -d '{"pause": null}' \
-    -H "X-Auth-Token: $token " \
-    -H "Content-type: application/json" $API_endpoint_compute/servers/$server_id/action
-  echo "$(date +"%h %d %H:%M:%S") $HOSTNAME Openstack_Backup: VM : $backup_name : $server_id : sendpause on API" >> $log
 done
 
 # Log in Syslog File
