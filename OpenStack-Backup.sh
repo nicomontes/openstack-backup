@@ -42,6 +42,39 @@ do
   last_backup[${#last_backup[*]}]=$line
 done
 
+# Launch Suspend for each VM
+for line in $backup_list
+do
+  backup_name=$(echo $line | cut -f1 -d ";" | grep -E -o "[A-Za-z0-9]*")
+  server_id=$(echo $line | cut -f4 -d ";" | grep -E -o "[a-z0-9]{8}\-[a-z0-9]{4}\-[a-z0-9]{4}\-[a-z0-9]{4}\-[a-z0-9]{12}")
+  # Send Suspend
+  curl -s -d '{"suspend": null}' \
+    -H "X-Auth-Token: $token " \
+    -H "Content-type: application/json" $API_endpoint_compute/servers/$server_id/action
+  echo "$(date +"%h %d %H:%M:%S") $HOSTNAME Openstack_Backup: VM : $backup_name : $server_id : sendsuspend on API" >> $log
+  sleep 1
+done
+sleep 5
+
+# Sleep when Suspend Process
+one_VM_suspend=true
+while [ $one_VM_suspend == true ]
+do
+  one_VM_suspend=false
+  for line in $backup_list
+  do
+    backup_name=$(echo $line | cut -f1 -d ";" | grep -E -o "[A-Za-z0-9]*")
+    server_id=$(echo $line | cut -f4 -d ";" | grep -E -o "[a-z0-9]{8}\-[a-z0-9]{4}\-[a-z0-9]{4}\-[a-z0-9]{4}\-[a-z0-9]{12}")
+    suspend=$(curl -s -d -H "X-Auth-Token: $token " \
+      -H "Content-type: application/json" $API_endpoint_compute/servers/$server_id | grep -o "\"status\":\ \"[A-Z]*\"" | grep -o "[A-Z]*")
+    if [ "$suspend" = "SUSPENDED" ]
+    then
+      one_VM_suspend=true
+    fi
+  done
+  sleep 5
+done
+
 # Launch Backup for each VM
 for line in $backup_list
 do
@@ -129,16 +162,16 @@ do
   fi
 done
 
-# UnPause VM
+# Resume VM
 for line in $backup_list
 do
   backup_name=$(echo $line | cut -f1 -d ";" | grep -E -o "[A-Za-z0-9]*")
   server_id=$(echo $line | cut -f4 -d ";" | grep -E -o "[a-z0-9]{8}\-[a-z0-9]{4}\-[a-z0-9]{4}\-[a-z0-9]{4}\-[a-z0-9]{12}")
   # Send UnPause
-  curl -s -d '{"pause": null}' \
+  curl -s -d '{"resume": null}' \
     -H "X-Auth-Token: $token " \
     -H "Content-type: application/json" $API_endpoint_compute/servers/$server_id/action
-  echo "$(date +"%h %d %H:%M:%S") $HOSTNAME Openstack_Backup: VM : $backup_name : $server_id : sendpause on API" >> $log
+  echo "$(date +"%h %d %H:%M:%S") $HOSTNAME Openstack_Backup: VM : $backup_name : $server_id : sendresume on API" >> $log
 done
 
 # Log in Syslog File
