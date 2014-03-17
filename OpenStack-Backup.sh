@@ -24,8 +24,7 @@ source $sources_file
 token=$(curl -s -k -X 'POST' $API_endpoint_keystone/tokens \
 -d '{"auth":{"passwordCredentials":{"username": "'$admin_user'", "password": "'$admin_pass'"}, "tenantId": "'$admin_tenant_ID'"}}' \
 -H 'Content-type: application/json'|grep -E -o '[A-Za-z0-9\+\-]{100,}')
-echo "$(date +"%h %d %H:%M:%S") $HOSTNAME Openstack_Backup: token GET" >> $log
-echo "$(date +"%h %d %H:%M:%S") $HOSTNAME Openstack_Backup: $token" >> $log
+echo "$(date +"%h %d %H:%M:%S") $HOSTNAME Openstack_Backup[$$]: token GET" >> $log
 
 # Last Backup ID
 for line in $backup_list
@@ -41,7 +40,7 @@ last_backup_list=$(nova image-list | grep -E "$regex_list" | cut -f2 -d "|" | gr
 for line in $last_backup_list
 do
   last_backup[${#last_backup[*]}]=$line
-	echo "$(date +"%h %d %H:%M:%S") $HOSTNAME Openstack_Backup: Last Backup : $line" >> $log
+	echo "$(date +"%h %d %H:%M:%S") $HOSTNAME Openstack_Backup[$$]: Last Backup : $line" >> $log
 done
 
 # Launch Backup for each VM
@@ -55,13 +54,13 @@ do
   curl -s -d '{"createBackup": {"name": "'$backup_name'","backup_type": "'$backup_type'","rotation": '$backup_rotation'}}' \
     -H "X-Auth-Token: $token " \
     -H "Content-type: application/json" $API_endpoint_compute/servers/$server_id/action
-  echo "$(date +"%h %d %H:%M:%S") $HOSTNAME Openstack_Backup: VM : $backup_name : $server_id : sendbackup on API" >> $log
+  echo "$(date +"%h %d %H:%M:%S") $HOSTNAME Openstack_Backup[$$]: VM : $backup_name : $server_id : sendbackup on API" >> $log
   sleep 5
 done
 sleep 5
 
 # Sleep when Create Backup Process
-echo "$(date +"%h %d %H:%M:%S") $HOSTNAME Openstack_Backup: Sleep when Create Backup Process" >> $log
+echo "$(date +"%h %d %H:%M:%S") $HOSTNAME Openstack_Backup[$$]: Sleep when Create Backup Process" >> $log
 VM_queued=$(glance image-list|grep -E -o ".*BackupAutoScript.*queued" | wc -c)
 i=0
 while [ $VM_queued -gt 0 ]
@@ -73,25 +72,25 @@ do
 	then
 		for id in $(glance image-list|grep -E -o ".*BackupAutoScript.*queued"|cut -f2 -d"|"|grep -E -o "[0-9a-z\-]*")
 		do
-			echo "$(date +"%h %d %H:%M:%S") $HOSTNAME Openstack_Backup: Backup $id : Timeout" >> $log
+			echo "$(date +"%h %d %H:%M:%S") $HOSTNAME Openstack_Backup[$$]: Backup $id : Timeout" >> $log
 			glance image-delete $id
-			echo "$(date +"%h %d %H:%M:%S") $HOSTNAME Openstack_Backup: Backup $id : Delete Request Sent" >> $log
+			echo "$(date +"%h %d %H:%M:%S") $HOSTNAME Openstack_Backup[$$]: Backup $id : Delete Request Sent" >> $log
 		done
 	fi
 done
-echo "$(date +"%h %d %H:%M:%S") $HOSTNAME Openstack_Backup: Backup Process Finished" >> $log
+echo "$(date +"%h %d %H:%M:%S") $HOSTNAME Openstack_Backup[$$]: Backup Process Finished" >> $log
 
 # Sleep when Saving Backup Process
-echo "$(date +"%h %d %H:%M:%S") $HOSTNAME Openstack_Backup: Sleep when Saving Backup Process" >> $log
+echo "$(date +"%h %d %H:%M:%S") $HOSTNAME Openstack_Backup[$$]: Sleep when Saving Backup Process" >> $log
 VM_saving=$(glance image-list|grep -E -o ".*BackupAutoScript.*saving" | wc -c)
 while [ $VM_saving -gt 0 ]
 do
   sleep 5
   VM_saving=$(glance image-list|grep -E -o ".*BackupAutoScript.*saving" | wc -c)
 done
-echo "$(date +"%h %d %H:%M:%S") $HOSTNAME Openstack_Backup: Backup Saved" >> $log
+echo "$(date +"%h %d %H:%M:%S") $HOSTNAME Openstack_Backup[$$]: Backup Saved" >> $log
 sleep 10
-echo "$(date +"%h %d %H:%M:%S") $HOSTNAME Openstack_Backup: Saving Process Finished" >> $log
+echo "$(date +"%h %d %H:%M:%S") $HOSTNAME Openstack_Backup[$$]: Saving Process Finished" >> $log
 
 # New Backup ID
 # Exec regex for match all NEW backup ID
@@ -119,11 +118,11 @@ do
   cp $glance_images_folder$VM_ID /glance/VMBackup/$Backup_ID 
   if [[ $(echo $?) -gt 0 ]]
   then
-    echo "$(date +"%h %d %H:%M:%S") $HOSTNAME Openstack_Backup: Backup : $Backup_ID check in /glance/images/ ERROR">> $log
-
+    echo "$(date +"%h %d %H:%M:%S") $HOSTNAME Openstack_Backup[$$]: Backup : $Backup_ID check in /glance/images/ ERROR $?">> $log
+		echo "$(date +"%h %d %H:%M:%S") $HOSTNAME Openstack_Backup[$$]: Backup : Command cp $glance_images_folder$VM_ID /glance/VMBackup/$Backup_ID">> $log
   else
     rm -f $$VM_ID
-    echo "$(date +"%h %d %H:%M:%S") $HOSTNAME Openstack_Backup: Backup : $Backup_ID Copied">> $log 
+    echo "$(date +"%h %d %H:%M:%S") $HOSTNAME Openstack_Backup[$$]: Backup : $Backup_ID Copied">> $log 
   fi
 done
 
@@ -133,9 +132,9 @@ do
   ls $glance_images_folder$Backup_ID 2>/dev/null 1>/dev/null
   if [[ $(echo $?) -gt 0 ]]
   then
-    echo "$(date +"%h %d %H:%M:%S") $HOSTNAME Openstack_Backup: Backup : $Backup_ID aren't in Glance images folder">> $log
+    echo "$(date +"%h %d %H:%M:%S") $HOSTNAME Openstack_Backup[$$]: Backup : $Backup_ID aren't in Glance images folder">> $log
     rm -f $glance_images_backup$Backup_ID
-    echo "$(date +"%h %d %H:%M:%S") $HOSTNAME Openstack_Backup: $Backup_ID Removed" >> $log
+    echo "$(date +"%h %d %H:%M:%S") $HOSTNAME Openstack_Backup[$$]: $Backup_ID Removed" >> $log
   fi
 done
 
@@ -147,9 +146,9 @@ do
 	if [[ $status != "ACTIVE" ]]
 	then
 		nova reboot $server_id
-		echo "$(date +"%h %d %H:%M:%S") $HOSTNAME Openstack_Backup: VM : $server_id : ERROR, REBOOT Sent" >> $log
+		echo "$(date +"%h %d %H:%M:%S") $HOSTNAME Openstack_Backup[$$]: VM : $server_id : ERROR, REBOOT Sent" >> $log
 	fi
 done
 
 # Log in Syslog File
-echo "$(date +"%h %d %H:%M:%S") $HOSTNAME Openstack_Backup: Backup Finished" >> $log
+echo "$(date +"%h %d %H:%M:%S") $HOSTNAME Openstack_Backup[$$]: Backup Finished" >> $log
