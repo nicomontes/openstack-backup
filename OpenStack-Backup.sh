@@ -115,14 +115,14 @@ last_backup=$(echo "$new_backup_list" | grep -E -v $regex_match_new_backup)
 # Copy VM Backup
 for Backup_ID in $last_backup
 do
-  cp $glance_images_folder$VM_ID /glance/VMBackup/$Backup_ID 
-  if [[ $(echo $?) -gt 0 ]]
+  cp $glance_images_folder$Backup_ID /glance/VMBackup/$Backup_ID
+  echo=$(echo $?)
+  if [[ $echo -gt 0 ]]
   then
-    echo "$(date +"%h %d %H:%M:%S") $HOSTNAME Openstack_Backup[$$]: Backup : $Backup_ID check in /glance/images/ ERROR $?">> $log
-		echo "$(date +"%h %d %H:%M:%S") $HOSTNAME Openstack_Backup[$$]: Backup : Command cp $glance_images_folder$VM_ID /glance/VMBackup/$Backup_ID">> $log
+    echo "$(date +"%h %d %H:%M:%S") $HOSTNAME Openstack_Backup[$$]: Backup : $Backup_ID check in /glance/images/ ERROR $echo">> $log
+		echo "$(date +"%h %d %H:%M:%S") $HOSTNAME Openstack_Backup[$$]: Backup : Command cp $glance_images_folder$Backup_ID /glance/VMBackup/$Backup_ID">> $log
   else
-    rm -f $$VM_ID
-    echo "$(date +"%h %d %H:%M:%S") $HOSTNAME Openstack_Backup[$$]: Backup : $Backup_ID Copied">> $log 
+    echo "$(date +"%h %d %H:%M:%S") $HOSTNAME Openstack_Backup[$$]: Backup : $Backup_ID Copied">> $log
   fi
 done
 
@@ -130,7 +130,8 @@ done
 for Backup_ID in $(ls $glance_images_backup|grep -E -o "[a-z0-9]{8}\-[a-z0-9]{4}\-[a-z0-9]{4}\-[a-z0-9]{4}\-[a-z0-9]{12}")
 do
   ls $glance_images_folder$Backup_ID 2>/dev/null 1>/dev/null
-  if [[ $(echo $?) -gt 0 ]]
+  echo=$(echo $?)
+  if [[ $echo -gt 0 ]]
   then
     echo "$(date +"%h %d %H:%M:%S") $HOSTNAME Openstack_Backup[$$]: Backup : $Backup_ID aren't in Glance images folder">> $log
     rm -f $glance_images_backup$Backup_ID
@@ -148,6 +149,18 @@ do
 		nova reboot $server_id
 		echo "$(date +"%h %d %H:%M:%S") $HOSTNAME Openstack_Backup[$$]: VM : $server_id : ERROR, REBOOT Sent" >> $log
 	fi
+done
+
+# Reset State when task is stay on backup
+for line in $backup_list
+do
+  server_id=$(echo $line | cut -f4 -d ";" | grep -E -o "[a-z0-9]{8}\-[a-z0-9]{4}\-[a-z0-9]{4}\-[a-z0-9]{4}\-[a-z0-9]{12}")
+  status=$(nova show $server_id | grep -E "task_state"|cut -f3 -d"|"|grep -E -o "[a-z_]*")
+  if [[ $status == "image_backup" ]]
+  then
+    nova reset-state --active $server_id
+    echo "$(date +"%h %d %H:%M:%S") $HOSTNAME Openstack_Backup[$$]: VM : $server_id : Backup task stay, nova reset-state Sent" >> $log
+  fi
 done
 
 # Log in Syslog File
